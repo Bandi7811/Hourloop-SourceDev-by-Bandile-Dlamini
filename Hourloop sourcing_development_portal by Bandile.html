@@ -1,0 +1,873 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hourloop SourceDEV — Amazon US Sourcing & Manufacturer Development</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg:       #F5F7FA;
+    --white:    #FFFFFF;
+    --border:   #E2E8F0;
+    --border2:  #CBD5E1;
+    --text:     #0F172A;
+    --sub:      #475569;
+    --muted:    #94A3B8;
+    --blue:     #2563EB;
+    --blue-lt:  #EFF6FF;
+    --blue-md:  #BFDBFE;
+    --green:    #059669;
+    --green-lt: #ECFDF5;
+    --green-md: #A7F3D0;
+    --amber:    #D97706;
+    --amber-lt: #FFFBEB;
+    --amber-md: #FDE68A;
+    --red:      #DC2626;
+    --red-lt:   #FEF2F2;
+    --red-md:   #FECACA;
+    --purple:   #7C3AED;
+    --purple-lt:#F5F3FF;
+    --sans: 'Inter', sans-serif;
+    --shadow-sm: 0 1px 3px rgba(0,0,0,.08), 0 1px 2px rgba(0,0,0,.05);
+    --shadow:    0 4px 12px rgba(0,0,0,.08), 0 2px 4px rgba(0,0,0,.04);
+    --shadow-md: 0 8px 24px rgba(0,0,0,.1), 0 3px 8px rgba(0,0,0,.05);
+  }
+
+  html, body { height: 100%; background: var(--bg); color: var(--text); font-family: var(--sans); font-size: 14px; -webkit-font-smoothing: antialiased; }
+
+  /* ── TOP BAR ── */
+  .topbar {
+    height: 60px; background: var(--white);
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 28px; position: sticky; top: 0; z-index: 100;
+    box-shadow: var(--shadow-sm);
+  }
+  .topbar-brand { display: flex; align-items: center; gap: 12px; }
+  .brand-icon {
+    width: 36px; height: 36px; border-radius: 9px;
+    background: var(--blue); display: grid; place-items: center;
+    box-shadow: 0 2px 8px rgba(37,99,235,.3);
+  }
+  .brand-icon svg { width: 18px; height: 18px; }
+  .brand-name { font-size: 16px; font-weight: 800; color: var(--text); letter-spacing: -.02em; }
+  .brand-name span { color: var(--blue); }
+  .brand-sub { font-size: 11px; color: var(--muted); font-weight: 400; margin-top: 1px; }
+
+  .topbar-pills { display: flex; align-items: center; gap: 8px; }
+  .req-pill {
+    font-size: 11px; font-weight: 600; letter-spacing: .01em;
+    padding: 5px 12px; border-radius: 20px;
+    display: flex; align-items: center; gap: 5px; border: 1.5px solid transparent;
+  }
+  .req-pill .dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+  .req-pill.r1 { background: var(--blue-lt); color: var(--blue); border-color: var(--blue-md); }
+  .req-pill.r2 { background: var(--amber-lt); color: var(--amber); border-color: var(--amber-md); }
+  .req-pill.r3 { background: var(--green-lt); color: var(--green); border-color: var(--green-md); }
+
+  .topbar-right { display: flex; align-items: center; gap: 16px; }
+  .live-badge {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 11px; font-weight: 600; color: var(--green);
+    background: var(--green-lt); border: 1px solid var(--green-md);
+    padding: 4px 10px; border-radius: 20px;
+  }
+  .pulse { width: 7px; height: 7px; border-radius: 50%; background: var(--green); animation: pulse 2s infinite; }
+  @keyframes pulse { 0%,100%{box-shadow:0 0 0 0 rgba(5,150,105,.4);} 50%{box-shadow:0 0 0 5px rgba(5,150,105,0);} }
+  .clock { font-size: 12px; font-weight: 600; color: var(--sub); font-variant-numeric: tabular-nums; }
+
+  /* ── APP LAYOUT ── */
+  .app { display: flex; height: calc(100vh - 60px - 34px); overflow: hidden; }
+
+  /* ── LEFT PANEL ── */
+  .left-panel {
+    width: 380px; min-width: 320px; flex-shrink: 0;
+    background: var(--white); border-right: 1px solid var(--border);
+    overflow-y: auto; display: flex; flex-direction: column;
+  }
+  .left-panel::-webkit-scrollbar { width: 5px; }
+  .left-panel::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 5px; }
+
+  .panel-section { border-bottom: 1px solid var(--border); }
+
+  .section-header {
+    padding: 16px 20px 10px;
+    font-size: 10px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase;
+    display: flex; align-items: center; gap: 8px; color: var(--sub);
+  }
+  .section-header::after { content:''; flex:1; height:1px; background: var(--border); }
+
+  .req-badge {
+    font-size: 9px; font-weight: 700; letter-spacing: .06em;
+    padding: 2px 7px; border-radius: 4px; text-transform: uppercase;
+  }
+  .req-badge.r1 { background: var(--blue-lt); color: var(--blue); }
+  .req-badge.r2 { background: var(--amber-lt); color: var(--amber); }
+  .req-badge.r3 { background: var(--green-lt); color: var(--green); }
+
+  /* KPI GRID */
+  .kpi-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 4px 18px 16px; }
+  .kpi-card {
+    background: var(--white); border: 1px solid var(--border);
+    border-radius: 10px; padding: 14px 16px;
+    position: relative; overflow: hidden; box-shadow: var(--shadow-sm);
+  }
+  .kpi-card::before { content:''; position:absolute; top:0; left:0; right:0; height:3px; background: var(--acc, var(--blue)); border-radius: 10px 10px 0 0; }
+  .kpi-card.a { --acc: var(--amber); }
+  .kpi-card.g { --acc: var(--green); }
+  .kpi-card.r { --acc: var(--red); }
+  .kpi-label { font-size: 10px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .07em; margin-bottom: 5px; }
+  .kpi-value { font-size: 24px; font-weight: 800; color: var(--text); letter-spacing: -.02em; }
+  .kpi-sub { font-size: 11px; color: var(--muted); margin-top: 3px; }
+
+  /* SUPPORT / TASK ITEMS */
+  .support-list { padding: 4px 18px 16px; display: flex; flex-direction: column; gap: 8px; }
+  .support-item {
+    display: flex; align-items: flex-start; gap: 12px;
+    background: var(--bg); border: 1px solid var(--border);
+    border-radius: 10px; padding: 12px 14px;
+    transition: border-color .2s, box-shadow .2s;
+  }
+  .support-item:hover { border-color: var(--blue-md); box-shadow: var(--shadow-sm); }
+  .support-icon {
+    width: 32px; height: 32px; border-radius: 8px; flex-shrink: 0;
+    background: var(--blue-lt); border: 1px solid var(--blue-md);
+    display: grid; place-items: center; margin-top: 1px;
+  }
+  .support-icon svg { width: 15px; height: 15px; stroke: var(--blue); }
+  .support-title { font-size: 12px; font-weight: 700; color: var(--text); margin-bottom: 3px; }
+  .support-desc { font-size: 11px; color: var(--sub); line-height: 1.6; }
+  .support-tag {
+    margin-left: auto; flex-shrink: 0; align-self: flex-start;
+    font-size: 9px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase;
+    padding: 3px 8px; border-radius: 4px;
+    background: var(--blue-lt); color: var(--blue); border: 1px solid var(--blue-md);
+  }
+
+  /* WORKFLOW */
+  .workflow-list { padding: 4px 18px 16px; display: flex; flex-direction: column; gap: 6px; }
+  .wf-step {
+    display: flex; align-items: flex-start; gap: 11px;
+    background: var(--bg); border: 1px solid var(--border);
+    border-radius: 10px; padding: 11px 13px;
+    transition: border-color .2s, box-shadow .2s;
+  }
+  .wf-step:hover { border-color: var(--amber-md); box-shadow: var(--shadow-sm); }
+  .wf-num {
+    font-size: 11px; font-weight: 800; color: var(--amber);
+    background: var(--amber-lt); border: 1px solid var(--amber-md);
+    border-radius: 6px; padding: 2px 8px; flex-shrink: 0; margin-top: 1px;
+  }
+  .wf-title { font-size: 12px; font-weight: 700; color: var(--text); margin-bottom: 2px; }
+  .wf-desc { font-size: 11px; color: var(--sub); line-height: 1.55; }
+  .wf-badge {
+    font-size: 9px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase;
+    padding: 3px 7px; border-radius: 4px; flex-shrink: 0; margin-top: 1px;
+  }
+  .wf-badge.sys { background: var(--amber-lt); color: var(--amber); border: 1px solid var(--amber-md); }
+  .wf-badge.doc { background: var(--purple-lt); color: var(--purple); border: 1px solid #DDD6FE; }
+
+  /* TRADE SHOW / MARGIN ROWS */
+  .po-list { padding: 4px 18px 16px; display: flex; flex-direction: column; gap: 6px; }
+  .po-row {
+    display: flex; align-items: center; gap: 10px;
+    background: var(--bg); border: 1px solid var(--border);
+    border-radius: 10px; padding: 10px 13px;
+    transition: border-color .2s, box-shadow .2s;
+  }
+  .po-row:hover { border-color: var(--green-md); box-shadow: var(--shadow-sm); }
+  .po-id { font-size: 11px; font-weight: 700; color: var(--green); flex-shrink: 0; letter-spacing: .02em; }
+  .po-info { flex: 1; }
+  .po-item { font-size: 12px; font-weight: 600; color: var(--text); }
+  .po-vendor { font-size: 10px; color: var(--muted); margin-top: 1px; }
+  .po-amount { font-size: 12px; font-weight: 700; color: var(--text); flex-shrink: 0; text-align: right; }
+  .po-status { font-size: 10px; font-weight: 700; padding: 3px 9px; border-radius: 6px; flex-shrink: 0; }
+  .po-status.approved { background: var(--green-lt); color: var(--green); border: 1px solid var(--green-md); }
+  .po-status.pending  { background: var(--amber-lt); color: var(--amber); border: 1px solid var(--amber-md); }
+  .po-status.review   { background: var(--blue-lt);   color: var(--blue);   border: 1px solid var(--blue-md); }
+
+  /* MARGIN TABLE */
+  .margin-table { padding: 4px 18px 18px; }
+  .margin-table table { width: 100%; border-collapse: collapse; font-size: 11px; }
+  .margin-table th { text-align: left; color: var(--muted); font-weight: 700; text-transform: uppercase; letter-spacing: .05em; font-size: 9px; padding: 0 8px 8px; border-bottom: 1px solid var(--border); }
+  .margin-table td { padding: 9px 8px; border-bottom: 1px solid var(--border); color: var(--sub); }
+  .margin-table td.num { text-align: right; font-variant-numeric: tabular-nums; color: var(--text); font-weight: 600; }
+  .margin-table tr:last-child td { border-bottom: none; }
+  .margin-pos { color: var(--green); font-weight: 700; }
+  .margin-neg { color: var(--red); font-weight: 700; }
+
+  /* ── RIGHT PANEL ── */
+  .right-panel { flex: 1; display: flex; flex-direction: column; overflow: hidden; background: var(--bg); }
+
+  .right-topbar {
+    padding: 16px 22px 14px; background: var(--white);
+    border-bottom: 1px solid var(--border); box-shadow: var(--shadow-sm);
+    display: flex; align-items: center; justify-content: space-between; flex-shrink: 0;
+  }
+  .rt-title { font-size: 16px; font-weight: 800; color: var(--text); letter-spacing: -.02em; }
+  .rt-sub { font-size: 11px; color: var(--muted); margin-top: 3px; }
+
+  .add-btn {
+    display: flex; align-items: center; gap: 7px;
+    background: var(--blue); color: #fff; border: none; border-radius: 9px;
+    padding: 10px 20px; font-family: var(--sans); font-size: 13px; font-weight: 700;
+    cursor: pointer; transition: background .2s, box-shadow .2s;
+    box-shadow: 0 2px 8px rgba(37,99,235,.3);
+  }
+  .add-btn:hover { background: #1D4ED8; box-shadow: 0 4px 14px rgba(37,99,235,.4); }
+
+  .topbar-actions { display: flex; align-items: center; gap: 8px; }
+  .btn-outline {
+    display: flex; align-items: center; gap: 7px;
+    background: var(--white); color: var(--sub); border: 1.5px solid var(--border);
+    border-radius: 9px; padding: 9px 16px; font-family: var(--sans); font-size: 13px; font-weight: 700;
+    cursor: pointer; transition: border-color .2s, color .2s, background .2s;
+  }
+  .btn-outline:hover { border-color: var(--green-md); color: var(--green); background: var(--green-lt); }
+  .btn-outline svg { stroke: currentColor; }
+  .excel-status { font-size: 10px; color: var(--muted); margin-top: 3px; }
+
+  /* KANBAN */
+  .kanban-board {
+    display: grid; grid-template-columns: repeat(4, 1fr);
+    gap: 14px; padding: 16px 18px; overflow-y: auto; flex: 1;
+  }
+  .kanban-board::-webkit-scrollbar { width: 5px; }
+  .kanban-board::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 5px; }
+
+  .kb-col { display: flex; flex-direction: column; gap: 0; }
+
+  .kb-col-header {
+    padding: 10px 13px; border-radius: 10px 10px 0 0; margin-bottom: 0;
+    font-size: 11px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase;
+    display: flex; align-items: center; justify-content: space-between;
+    border: 1.5px solid transparent; border-bottom: none;
+  }
+  .col-count { font-size: 11px; font-weight: 800; padding: 2px 9px; border-radius: 20px; }
+
+  .col-new        .kb-col-header { background: var(--red-lt);    color: var(--red);    border-color: var(--red-md); }
+  .col-new        .col-count     { background: var(--red-md);    color: var(--red); }
+  .col-contacted  .kb-col-header { background: var(--amber-lt);  color: var(--amber);  border-color: var(--amber-md); }
+  .col-contacted  .col-count     { background: var(--amber-md);  color: var(--amber); }
+  .col-negotiating .kb-col-header { background: var(--blue-lt);  color: var(--blue);   border-color: var(--blue-md); }
+  .col-negotiating .col-count     { background: var(--blue-md);  color: var(--blue); }
+  .col-approved   .kb-col-header { background: var(--green-lt);  color: var(--green);  border-color: var(--green-md); }
+  .col-approved   .col-count     { background: var(--green-md);  color: var(--green); }
+
+  .kb-col-drop {
+    flex: 1; min-height: 120px;
+    border: 1.5px solid var(--border2); border-top: none;
+    border-radius: 0 0 10px 10px; background: rgba(255,255,255,.7);
+    padding: 8px; display: flex; flex-direction: column; gap: 7px;
+    transition: border-color .2s, background .2s;
+  }
+  .col-new         .kb-col-drop { border-color: var(--red-md); }
+  .col-contacted   .kb-col-drop { border-color: var(--amber-md); }
+  .col-negotiating .kb-col-drop { border-color: var(--blue-md); }
+  .col-approved    .kb-col-drop { border-color: var(--green-md); }
+  .kb-col-drop.drag-over { background: var(--blue-lt); border-color: var(--blue); }
+
+  /* LEAD CARDS */
+  .issue-card {
+    background: var(--white); border: 1px solid var(--border);
+    border-radius: 9px; padding: 12px 14px; cursor: grab;
+    transition: border-color .2s, transform .15s, box-shadow .15s;
+    position: relative; overflow: hidden; box-shadow: var(--shadow-sm);
+  }
+  .issue-card::before { content:''; position:absolute; left:0; top:0; bottom:0; width:4px; background: var(--ca, var(--muted)); border-radius: 9px 0 0 9px; }
+  .issue-card[data-priority="critical"] { --ca: var(--red); }
+  .issue-card[data-priority="high"]     { --ca: var(--amber); }
+  .issue-card[data-priority="medium"]   { --ca: var(--blue); }
+  .issue-card[data-priority="low"]      { --ca: var(--green); }
+  .issue-card:hover { border-color: var(--border2); transform: translateY(-2px); box-shadow: var(--shadow-md); }
+  .issue-card.dragging { opacity: .45; transform: scale(.96); cursor: grabbing; }
+
+  .ic-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 5px; padding-left: 8px; }
+  .ic-id { font-size: 10px; font-weight: 700; color: var(--muted); letter-spacing: .05em; }
+  .ic-priority { font-size: 9px; font-weight: 700; padding: 2px 7px; border-radius: 5px; letter-spacing: .04em; text-transform: uppercase; }
+  .ic-priority.critical { background: var(--red-lt);   color: var(--red);   }
+  .ic-priority.high     { background: var(--amber-lt); color: var(--amber); }
+  .ic-priority.medium   { background: var(--blue-lt);  color: var(--blue);  }
+  .ic-priority.low      { background: var(--green-lt); color: var(--green); }
+
+  .ic-type-tag {
+    display: inline-block; margin-left: 8px; margin-bottom: 5px;
+    font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em;
+    padding: 2px 7px; border-radius: 4px;
+    background: var(--purple-lt); color: var(--purple);
+  }
+  .ic-title { font-size: 12px; font-weight: 600; color: var(--text); line-height: 1.45; margin-bottom: 7px; padding-left: 8px; }
+  .ic-meta { font-size: 10px; color: var(--muted); padding-left: 8px; display: flex; flex-direction: column; gap: 2px; }
+
+  /* LOG */
+  .issue-log-section {
+    border-top: 1px solid var(--border); flex-shrink: 0;
+    max-height: 180px; overflow-y: auto; background: var(--white);
+  }
+  .issue-log-section::-webkit-scrollbar { width: 4px; }
+  .issue-log-section::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 4px; }
+  .log-header {
+    padding: 10px 22px 7px; font-size: 10px; font-weight: 700; letter-spacing: .1em;
+    text-transform: uppercase; color: var(--sub);
+    display: flex; align-items: center; gap: 8px;
+    position: sticky; top: 0; background: var(--white);
+    border-bottom: 1px solid var(--border); z-index: 1;
+  }
+  .log-header::after { content:''; flex:1; height:1px; background: var(--border); }
+  .log-entries { padding: 6px 22px 12px; display: flex; flex-direction: column; gap: 4px; }
+  .log-entry { display: flex; align-items: baseline; gap: 10px; font-size: 11px; }
+  .log-time   { color: var(--muted); flex-shrink: 0; font-variant-numeric: tabular-nums; }
+  .log-action { color: var(--blue); flex-shrink: 0; font-weight: 700; }
+  .log-msg    { color: var(--sub); }
+
+  /* MODAL */
+  .modal-overlay { display:none; position:fixed; inset:0; background:rgba(15,23,42,.5); z-index:200; align-items:center; justify-content:center; backdrop-filter: blur(4px); }
+  .modal-overlay.open { display:flex; }
+  .modal { background: var(--white); border: 1px solid var(--border); border-radius: 14px; width: 520px; max-width: 95vw; padding: 30px; box-shadow: var(--shadow-md); }
+  .modal-title { font-size: 18px; font-weight: 800; color: var(--text); letter-spacing: -.02em; margin-bottom: 4px; }
+  .modal-sub { font-size: 12px; color: var(--muted); margin-bottom: 22px; }
+  .form-group { margin-bottom: 14px; }
+  .form-label { font-size: 11px; font-weight: 700; color: var(--sub); text-transform: uppercase; letter-spacing: .07em; display: block; margin-bottom: 5px; }
+  .form-input, .form-select, .form-textarea {
+    width: 100%; background: var(--bg); border: 1.5px solid var(--border);
+    border-radius: 8px; padding: 10px 13px; color: var(--text);
+    font-family: var(--sans); font-size: 13px; outline: none; transition: border-color .2s, box-shadow .2s;
+  }
+  .form-input:focus, .form-select:focus, .form-textarea:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(37,99,235,.1); background: var(--white); }
+  .form-select option { background: var(--white); }
+  .form-textarea { min-height: 80px; resize: vertical; line-height: 1.6; }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .modal-actions { display: flex; gap: 10px; margin-top: 22px; justify-content: flex-end; }
+  .btn-cancel { padding: 10px 20px; border-radius: 8px; border: 1.5px solid var(--border); background: transparent; color: var(--sub); font-family: var(--sans); font-size: 13px; font-weight: 600; cursor: pointer; transition: border-color .2s; }
+  .btn-cancel:hover { border-color: var(--border2); }
+  .btn-submit { padding: 10px 22px; border-radius: 8px; border: none; background: var(--blue); color: #fff; font-family: var(--sans); font-size: 13px; font-weight: 700; cursor: pointer; transition: background .2s, box-shadow .2s; box-shadow: 0 2px 8px rgba(37,99,235,.3); }
+  .btn-submit:hover { background: #1D4ED8; }
+
+  @media (max-width: 960px) {
+    .app { flex-direction: column; height: auto; overflow: auto; }
+    .left-panel { width: 100%; min-width: 0; max-height: none; border-right: none; border-bottom: 1px solid var(--border); }
+    .kanban-board { grid-template-columns: repeat(2,1fr); }
+    .topbar-pills { display: none; }
+    .right-panel { height: auto; min-height: 600px; }
+  }
+  @media (max-width: 560px) {
+    .kanban-board { grid-template-columns: 1fr; }
+    .topbar { padding: 0 16px; }
+    .form-row { grid-template-columns: 1fr; }
+  }
+
+  /* ── FOOTER CREDIT BAR ── */
+  .credit-bar {
+    height: 34px; background: var(--white); border-top: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    font-size: 11px; color: var(--muted); flex-shrink: 0;
+  }
+  .credit-bar .credit-name { font-weight: 700; color: var(--sub); }
+  .credit-bar .credit-dot { width: 3px; height: 3px; border-radius: 50%; background: var(--border2); }
+  .credit-bar a { color: var(--blue); font-weight: 600; text-decoration: none; }
+  .credit-bar a:hover { text-decoration: underline; }
+</style>
+</head>
+<body>
+
+<!-- ── TOP BAR ── -->
+<header class="topbar">
+  <div class="topbar-brand">
+    <div class="brand-icon">
+      <svg viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M9 1.5l7 3.5v8L9 16.5 2 13V5l7-3.5z" stroke="white" stroke-width="1.4" stroke-linejoin="round"/>
+        <path d="M2 5l7 3.5L16 5M9 8.5V16.5" stroke="white" stroke-width="1.4" stroke-linejoin="round"/>
+      </svg>
+    </div>
+    <div>
+      <div class="brand-name">HOURLOOP <span>SOURCEDEV</span></div>
+      <div class="brand-sub">Amazon US Sourcing & Manufacturer Development</div>
+    </div>
+  </div>
+
+  <div class="topbar-pills">
+    <span class="req-pill r1"><span class="dot"></span> Category Research & Outreach</span>
+    <span class="req-pill r2"><span class="dot"></span> Manufacturer Relations</span>
+    <span class="req-pill r3"><span class="dot"></span> Pricing & Trade Shows</span>
+  </div>
+
+  <div class="topbar-right">
+    <div class="live-badge"><div class="pulse"></div> LIVE</div>
+    <div class="clock" id="clock"></div>
+  </div>
+</header>
+
+<div class="app">
+
+  <!-- ═══════════════ LEFT PANEL ═══════════════ -->
+  <aside class="left-panel">
+
+    <!-- KPIs -->
+    <div class="panel-section">
+      <div class="section-header">Pipeline Overview</div>
+      <div class="kpi-grid">
+        <div class="kpi-card">
+          <div class="kpi-label">Manufacturers Contacted</div>
+          <div class="kpi-value">86</div>
+          <div class="kpi-sub">This month, 6 categories</div>
+        </div>
+        <div class="kpi-card a">
+          <div class="kpi-label">Active Conversations</div>
+          <div class="kpi-value" id="open-lead-count">14</div>
+          <div class="kpi-sub">Tracked in real time</div>
+        </div>
+        <div class="kpi-card g">
+          <div class="kpi-label">Avg. Response Rate</div>
+          <div class="kpi-value">32%</div>
+          <div class="kpi-sub">Cold outreach emails</div>
+        </div>
+        <div class="kpi-card r">
+          <div class="kpi-label">Target Margin</div>
+          <div class="kpi-value">38%</div>
+          <div class="kpi-sub">Landed cost vs. sell price</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CATEGORY RESEARCH & OUTREACH — REQ 1 -->
+    <div class="panel-section">
+      <div class="section-header">How I Find New Manufacturers <span class="req-badge r1">Step 1 · Research & Outreach</span></div>
+      <div class="support-list">
+
+        <div class="support-item">
+          <div class="support-icon">
+            <svg viewBox="0 0 16 16" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="7" cy="7" r="5"/><path d="M14 14l-3-3"/>
+            </svg>
+          </div>
+          <div style="flex:1">
+            <div class="support-title">Category & Competitive Analysis</div>
+            <div class="support-desc">Track trending and underserved categories on Amazon US — review best-seller rank, review velocity, price bands, and listing gaps to decide where to source next.</div>
+          </div>
+          <span class="support-tag">Weekly</span>
+        </div>
+
+        <div class="support-item">
+          <div class="support-icon">
+            <svg viewBox="0 0 16 16" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="1.5" y="3" width="13" height="10" rx="1.5"/><path d="M1.5 4l6.5 5 6.5-5"/>
+            </svg>
+          </div>
+          <div style="flex:1">
+            <div class="support-title">Manufacturer Prospecting</div>
+            <div class="support-desc">Build target lists from sourcing directories and trade platforms; shortlist factories that match the category, MOQ, and certification requirements.</div>
+          </div>
+          <span class="support-tag">Daily</span>
+        </div>
+
+        <div class="support-item">
+          <div class="support-icon">
+            <svg viewBox="0 0 16 16" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M1.5 4l5.5 4.5L12.5 4"/><rect x="1.5" y="3" width="13" height="10" rx="1.5"/>
+            </svg>
+          </div>
+          <div style="flex:1">
+            <div class="support-title">Cold Outreach Email Campaigns</div>
+            <div class="support-desc">Draft and send personalized introduction emails to prospective manufacturers; log opens, replies, and run a structured follow-up cadence until a response is secured.</div>
+          </div>
+          <span class="support-tag">Daily</span>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ENGAGEMENT WORKFLOW — REQ 2 -->
+    <div class="panel-section">
+      <div class="section-header">Manufacturer Engagement Workflow <span class="req-badge r2">Steps 2–4 · Relations</span></div>
+      <div class="workflow-list">
+        <div class="wf-step">
+          <span class="wf-num">01</span>
+          <div style="flex:1">
+            <div class="wf-title">Schedule Call / Video Conference</div>
+            <div class="wf-desc">Once a manufacturer replies, set up a recurring touchpoint — phone or video — to keep the relationship warm and answer technical questions.</div>
+          </div>
+          <span class="wf-badge sys">Meeting</span>
+        </div>
+        <div class="wf-step">
+          <span class="wf-num">02</span>
+          <div style="flex:1">
+            <div class="wf-title">Company Introduction & Cooperation Proposal</div>
+            <div class="wf-desc">Present our company profile, order volume potential, and partnership terms; propose a cooperation structure tailored to the manufacturer's capacity.</div>
+          </div>
+          <span class="wf-badge doc">Proposal</span>
+        </div>
+        <div class="wf-step">
+          <span class="wf-num">03</span>
+          <div style="flex:1">
+            <div class="wf-title">Sample Request & Spec Review</div>
+            <div class="wf-desc">Request product samples, confirm specs, materials, and compliance docs before committing to a price negotiation.</div>
+          </div>
+          <span class="wf-badge sys">Samples</span>
+        </div>
+        <div class="wf-step">
+          <span class="wf-num">04</span>
+          <div style="flex:1">
+            <div class="wf-title">Product Price & Profit Assessment</div>
+            <div class="wf-desc">Build a landed-cost model — FOB price, freight, duties, and FBA fees — and compare against Amazon sell price to confirm the deal clears our margin target.</div>
+          </div>
+          <span class="wf-badge doc">Margin Model</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- TRADE SHOW PLAN — REQ 3 -->
+    <div class="panel-section">
+      <div class="section-header">Trade Show Participation Plan <span class="req-badge r3">Steps 5–6 · Trade Shows</span></div>
+      <div class="po-list">
+        <div class="po-row">
+          <span class="po-id">●</span>
+          <div class="po-info"><div class="po-item">ASD Market Week</div><div class="po-vendor">Las Vegas, NV · general merchandise</div></div>
+          <span class="po-status pending">Planning</span>
+        </div>
+        <div class="po-row">
+          <span class="po-id">●</span>
+          <div class="po-info"><div class="po-item">Global Sources — Hong Kong</div><div class="po-vendor">Hong Kong · electronics & hardware</div></div>
+          <span class="po-status approved">Confirmed</span>
+        </div>
+        <div class="po-row">
+          <span class="po-id">●</span>
+          <div class="po-info"><div class="po-item">National Hardware Show</div><div class="po-vendor">Las Vegas, NV · home & tools</div></div>
+          <span class="po-status review">Pending approval</span>
+        </div>
+        <div class="po-row">
+          <span class="po-id">●</span>
+          <div class="po-info"><div class="po-item">Canton Fair</div><div class="po-vendor">Guangzhou · prior attendance, post-show follow-up</div></div>
+          <span class="po-status approved">Attended</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- PRICE & PROFIT SNAPSHOT -->
+    <div class="panel-section">
+      <div class="section-header">Price & Profit Snapshot <span class="req-badge r2">Step 4 · Analysis</span></div>
+      <div class="margin-table">
+        <table>
+          <thead>
+            <tr><th>SKU / Category</th><th style="text-align:right">FOB</th><th style="text-align:right">Landed</th><th style="text-align:right">Margin</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Silicone kitchen set</td><td class="num">$2.80</td><td class="num">$5.10</td><td class="num margin-pos">41%</td></tr>
+            <tr><td>LED desk lamp</td><td class="num">$6.40</td><td class="num">$11.20</td><td class="num margin-pos">36%</td></tr>
+            <tr><td>Travel organizer bag</td><td class="num">$3.10</td><td class="num">$5.90</td><td class="num margin-neg">22%</td></tr>
+            <tr><td>Pet grooming kit</td><td class="num">$4.20</td><td class="num">$7.60</td><td class="num margin-pos">39%</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </aside>
+
+  <!-- ═══════════════ RIGHT PANEL ═══════════════ -->
+  <main class="right-panel">
+
+    <div class="right-topbar">
+      <div>
+        <div class="rt-title">Manufacturer Development Pipeline</div>
+        <div class="rt-sub">From first email to onboarded supplier · Drag cards to update stage</div>
+        <div class="excel-status" id="excel-status">No Excel file loaded yet — showing sample pipeline data</div>
+      </div>
+      <div class="topbar-actions">
+        <input type="file" id="excel-input" accept=".xlsx,.xls" style="display:none" onchange="importFromExcel(event)">
+        <button class="btn-outline" onclick="document.getElementById('excel-input').click()">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M7 1v8M3.5 5.5L7 9l3.5-3.5"/><path d="M1 11.5h12v1.5H1z"/></svg>
+          Import Excel
+        </button>
+        <button class="btn-outline" onclick="exportToExcel()">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M7 9V1M3.5 4.5L7 1l3.5 3.5"/><path d="M1 11.5h12v1.5H1z"/></svg>
+          Export Excel
+        </button>
+        <button class="add-btn" onclick="openModal()">
+          <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M6.5 1v11M1 6.5h11" stroke="white" stroke-width="2" stroke-linecap="round"/></svg>
+          Log New Lead
+        </button>
+      </div>
+    </div>
+
+    <div class="kanban-board">
+      <div class="kb-col col-new">
+        <div class="kb-col-header">New Leads <span class="col-count" id="cnt-new">0</span></div>
+        <div class="kb-col-drop" id="drop-new" ondragover="dragOver(event)" ondrop="drop(event,'new')" ondragleave="dragLeave(event)"></div>
+      </div>
+      <div class="kb-col col-contacted">
+        <div class="kb-col-header">Contacted <span class="col-count" id="cnt-contacted">0</span></div>
+        <div class="kb-col-drop" id="drop-contacted" ondragover="dragOver(event)" ondrop="drop(event,'contacted')" ondragleave="dragLeave(event)"></div>
+      </div>
+      <div class="kb-col col-negotiating">
+        <div class="kb-col-header">In Negotiation <span class="col-count" id="cnt-negotiating">0</span></div>
+        <div class="kb-col-drop" id="drop-negotiating" ondragover="dragOver(event)" ondrop="drop(event,'negotiating')" ondragleave="dragLeave(event)"></div>
+      </div>
+      <div class="kb-col col-approved">
+        <div class="kb-col-header">Approved & Onboarded <span class="col-count" id="cnt-approved">0</span></div>
+        <div class="kb-col-drop" id="drop-approved" ondragover="dragOver(event)" ondrop="drop(event,'approved')" ondragleave="dragLeave(event)"></div>
+      </div>
+    </div>
+
+    <div class="issue-log-section">
+      <div class="log-header">Outreach & Negotiation Activity Log</div>
+      <div class="log-entries" id="activity-log">
+        <div class="log-entry">
+          <span class="log-time">--:--</span>
+          <span class="log-action">SYSTEM</span>
+          <span class="log-msg">Dashboard ready — manufacturer pipeline active</span>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<footer class="credit-bar">
+  <span>Built &amp; maintained by</span>
+  <span class="credit-name">Bandile Dlamini</span>
+  <span class="credit-dot"></span>
+  <a href="tel:+886900167900">+886 900 167 900</a>
+</footer>
+
+<!-- ── MODAL ── -->
+<div class="modal-overlay" id="modal">
+  <div class="modal">
+    <div class="modal-title">Log New Manufacturer Lead</div>
+    <div class="modal-sub">Step 1 — Every new contact is logged, tracked, and moved through the pipeline</div>
+
+    <div class="form-group">
+      <label class="form-label">Manufacturer Name</label>
+      <input class="form-input" id="f-title" placeholder="e.g. Yiwu Sunrise Houseware Co." />
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Product Category</label>
+        <select class="form-select" id="f-category">
+          <option>Kitchen & Dining</option>
+          <option>Home & Organization</option>
+          <option>Electronics & Accessories</option>
+          <option>Tools & Hardware</option>
+          <option>Pet Supplies</option>
+          <option>Outdoor & Sports</option>
+          <option>Other</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Priority</label>
+        <select class="form-select" id="f-priority">
+          <option value="critical">Critical</option>
+          <option value="high">High</option>
+          <option value="medium" selected>Medium</option>
+          <option value="low">Low</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Region / Country</label>
+        <input class="form-input" id="f-po" placeholder="e.g. Ningbo, China" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Assigned To</label>
+        <input class="form-input" id="f-owner" placeholder="Name or team" />
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Notes & Next Step</label>
+      <textarea class="form-textarea" id="f-desc" placeholder="Where this lead came from, what was discussed, and the next action…"></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal()">Cancel</button>
+      <button class="btn-submit" onclick="submitLead()">Log & Track Lead</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  function updateClock(){
+    document.getElementById('clock').textContent =
+      new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  }
+  setInterval(updateClock,1000); updateClock();
+
+  let leadCounter = 0, draggingId = null;
+
+  const initialLeads = [
+    { title:'Yiwu Sunrise Houseware Co. — initial outreach sent',        category:'Kitchen & Dining',          priority:'medium',   region:'Yiwu, China',      owner:'Self', status:'new'         },
+    { title:'Ningbo Forge Tools Ltd. — replied, scheduling intro call',  category:'Tools & Hardware',          priority:'high',     region:'Ningbo, China',    owner:'Self', status:'contacted'   },
+    { title:'BrightHome Electronics — sample requested',                 category:'Electronics & Accessories', priority:'high',     region:'Shenzhen, China',  owner:'Self', status:'negotiating' },
+    { title:'PawCare Manufacturing — pricing review in progress',        category:'Pet Supplies',              priority:'medium',   region:'Qingdao, China',   owner:'Self', status:'negotiating' },
+    { title:'GreenPack Solutions — terms agreed, first PO drafted',      category:'Home & Organization',       priority:'medium',   region:'Foshan, China',    owner:'Self', status:'approved'    },
+  ];
+
+  function escHtml(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+  function renderLead(lead){
+    const card = document.createElement('div');
+    card.className = 'issue-card';
+    card.setAttribute('data-priority', lead.priority);
+    card.setAttribute('data-id', lead.id);
+    card.setAttribute('draggable','true');
+    const priLabel = lead.priority.charAt(0).toUpperCase()+lead.priority.slice(1);
+    const t = new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+    card.innerHTML = `
+      <div class="ic-top">
+        <span class="ic-id">MFG-${String(lead.id).padStart(4,'0')}</span>
+        <span class="ic-priority ${lead.priority}">${priLabel}</span>
+      </div>
+      <div class="ic-type-tag">${escHtml(lead.category)}</div>
+      <div class="ic-title">${escHtml(lead.title)}</div>
+      <div class="ic-meta">
+        <span>${escHtml(lead.region||'—')}</span>
+        <span>${escHtml(lead.owner||'Unassigned')} · ${t}</span>
+      </div>`;
+    card.addEventListener('dragstart',()=>{ draggingId=lead.id; setTimeout(()=>card.classList.add('dragging'),0); });
+    card.addEventListener('dragend',()=>{ card.classList.remove('dragging'); draggingId=null; });
+    return card;
+  }
+
+  function placeLead(lead){
+    const drop = document.getElementById('drop-'+lead.status);
+    if(drop) drop.appendChild(renderLead(lead));
+    updateCounts();
+  }
+
+  function updateCounts(){
+    ['new','contacted','negotiating','approved'].forEach(col=>{
+      document.getElementById('cnt-'+col).textContent = document.getElementById('drop-'+col).children.length;
+    });
+    const open = ['new','contacted','negotiating'].reduce((a,c)=>a+document.getElementById('drop-'+c).children.length,0);
+    document.getElementById('open-lead-count').textContent = open;
+  }
+
+  function dragOver(e){ e.preventDefault(); e.currentTarget.classList.add('drag-over'); }
+  function dragLeave(e){ e.currentTarget.classList.remove('drag-over'); }
+  function drop(e,col){
+    e.preventDefault(); e.currentTarget.classList.remove('drag-over');
+    if(draggingId===null) return;
+    const card = document.querySelector(`[data-id="${draggingId}"]`);
+    if(!card) return;
+    document.getElementById('drop-'+col).appendChild(card);
+    updateCounts();
+    const labels={new:'New Lead',contacted:'Contacted',negotiating:'In Negotiation',approved:'Approved & Onboarded'};
+    addLog('MOVED',`MFG-${String(draggingId).padStart(4,'0')} → ${labels[col]}`);
+  }
+
+  function addLog(action,msg){
+    const log = document.getElementById('activity-log');
+    const entry = document.createElement('div');
+    entry.className='log-entry';
+    const t = new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+    entry.innerHTML=`<span class="log-time">${t}</span><span class="log-action">${action}</span><span class="log-msg">${escHtml(msg)}</span>`;
+    log.prepend(entry);
+  }
+
+  function clearBoard(){
+    ['new','contacted','negotiating','approved'].forEach(col=>{
+      document.getElementById('drop-'+col).innerHTML='';
+    });
+  }
+
+  function exportToExcel(){
+    const rows = [];
+    ['new','contacted','negotiating','approved'].forEach(col=>{
+      const labels={new:'New Lead',contacted:'Contacted',negotiating:'In Negotiation',approved:'Approved & Onboarded'};
+      document.querySelectorAll('#drop-'+col+' .issue-card').forEach(card=>{
+        rows.push({
+          'Lead ID': card.querySelector('.ic-id').textContent,
+          'Manufacturer / Notes': card.querySelector('.ic-title').textContent,
+          'Category': card.querySelector('.ic-type-tag').textContent,
+          'Priority': card.querySelector('.ic-priority').textContent,
+          'Region': card.querySelectorAll('.ic-meta span')[0].textContent,
+          'Owner': card.querySelectorAll('.ic-meta span')[1].textContent.split(' · ')[0],
+          'Status': labels[col]
+        });
+      });
+    });
+    const ws = XLSX.utils.json_to_sheet(rows);
+    ws['!cols'] = [{wch:10},{wch:42},{wch:22},{wch:10},{wch:18},{wch:14},{wch:18}];
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Manufacturer Pipeline');
+    XLSX.writeFile(wb, 'Hourloop_Manufacturer_Pipeline.xlsx');
+    addLog('EXPORT',`${rows.length} leads exported to Excel`);
+  }
+
+  const statusKeyMap = {
+    'new lead':'new', 'new':'new',
+    'contacted':'contacted',
+    'in negotiation':'negotiating', 'negotiating':'negotiating',
+    'approved & onboarded':'approved', 'approved':'approved', 'onboarded':'approved'
+  };
+
+  function importFromExcel(evt){
+    const file = evt.target.files[0];
+    if(!file) return;
+    const reader = new FileReader();
+    reader.onload = function(e){
+      try{
+        const data = new Uint8Array(e.target.result);
+        const wb = XLSX.read(data, {type:'array'});
+        const sheet = wb.Sheets[wb.SheetNames[0]];
+        const json = XLSX.utils.sheet_to_json(sheet);
+        if(!json.length){ addLog('IMPORT','File loaded but no rows were found'); return; }
+
+        clearBoard();
+        leadCounter = 0;
+        json.forEach(row=>{
+          leadCounter++;
+          const rawStatus = (row['Status']||'New Lead').toString().trim().toLowerCase();
+          const lead = {
+            id: leadCounter,
+            title: row['Manufacturer / Notes'] || row['Manufacturer'] || row['Title'] || 'Untitled lead',
+            category: row['Category'] || 'Other',
+            priority: (row['Priority']||'medium').toString().trim().toLowerCase(),
+            region: row['Region'] || '',
+            owner: row['Owner'] || 'Unassigned',
+            status: statusKeyMap[rawStatus] || 'new'
+          };
+          placeLead(lead);
+        });
+        document.getElementById('excel-status').textContent =
+          `Loaded from "${file.name}" — ${json.length} leads`;
+        addLog('IMPORT',`${json.length} leads loaded from "${file.name}"`);
+      }catch(err){
+        addLog('ERROR','Could not read that Excel file — check the column headers');
+      }
+    };
+    reader.readAsArrayBuffer(file);
+    evt.target.value = '';
+  }
+
+  function openModal(){ document.getElementById('modal').classList.add('open'); document.getElementById('f-title').focus(); }
+  function closeModal(){
+    document.getElementById('modal').classList.remove('open');
+    ['f-title','f-po','f-owner','f-desc'].forEach(id=>document.getElementById(id).value='');
+  }
+  document.getElementById('modal').addEventListener('click',e=>{ if(e.target===e.currentTarget) closeModal(); });
+
+  function submitLead(){
+    const title = document.getElementById('f-title').value.trim();
+    if(!title){ document.getElementById('f-title').focus(); return; }
+    leadCounter++;
+    const lead={
+      id: leadCounter, title,
+      category: document.getElementById('f-category').value,
+      priority: document.getElementById('f-priority').value,
+      region: document.getElementById('f-po').value.trim(),
+      owner: document.getElementById('f-owner').value.trim()||'Unassigned',
+      status:'new'
+    };
+    placeLead(lead);
+    addLog('LOGGED',`MFG-${String(lead.id).padStart(4,'0')} — ${title.substring(0,50)}`);
+    closeModal();
+  }
+
+  initialLeads.forEach(lead=>{ leadCounter++; lead.id=leadCounter; placeLead(lead); });
+  addLog('LOAD','5 manufacturer leads loaded — pipeline ready');
+</script>
+</body>
+</html>
